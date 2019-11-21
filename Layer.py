@@ -16,8 +16,8 @@ class ConvolutionalLayer(object):
         elif initializer == "ALEXNET_bias0":
             self.weights = np.random.normal(0, 0.01, weights_shape)
             self.biases = np.zeros([1, 1, 1, weights_shape[-1]])
-        self.v_weights = None
-        self.v_biases = None
+        self.v_weights = np.zeros(self.weights.shape)
+        self.v_biases = np.zeros(self.biases.shape)
         self.activation_function = activation_function
         self.pad = pad
         self.stride = stride
@@ -37,7 +37,7 @@ class ConvolutionalLayer(object):
         outputs = np.zeros([inputs.shape[0], (inputs.shape[1]-self.shape[0])//self.stride + 1, (inputs.shape[2]-self.shape[1])//self.stride + 1, self.shape[-1]])
         for h in range(outputs.shape[1]):
             for w in range(outputs.shape[2]):
-                outputs[:, h, w, :] = np.tensordot(inputs[:, h*self.stride:h*self.stride+self.shape[0], w*self.stride:w*self.stride+self.shape[1], :], self.weights, axes=([1,2,3],[0,1,2])) + self.biases
+                outputs[:, h, w, :] = np.tensordot(inputs[:, h*self.stride:h*self.stride+self.shape[0], w*self.stride:w*self.stride+self.shape[1], :], self.weights, axes=([1,2,3],[0,1,2])) + self.biases[:, 0, 0, :]
         self.inputs_activation = outputs
         if self.activation_function == "SIGMOID":
             outputs = 1/(1+np.exp(outputs))
@@ -67,7 +67,7 @@ class ConvolutionalLayer(object):
         
         if self.pad == "SAME":
             inputs = np.pad(self.inputs, ((0, 0), ((self.shape[0]-1)//2, self.shape[0]//2), ((self.shape[1]-1)//2, self.shape[1]//2),(0, 0)), "constant")
-            d_inputs = np.pad(d_inputs, (((0, 0), (self.shape[0]-1)//2, self.shape[0]//2), ((self.shape[1]-1)//2, self.shape[1]//2),(0, 0)), "constant")
+            d_inputs = np.pad(d_inputs, ((0, 0), ((self.shape[0]-1)//2, self.shape[0]//2), ((self.shape[1]-1)//2, self.shape[1]//2),(0, 0)), "constant")
         else:
             inputs = self.inputs
             
@@ -78,7 +78,7 @@ class ConvolutionalLayer(object):
                 d_biases += np.average(d_outputs[:, h, w, :], axis=0).reshape(1, 1, 1, -1)
                 
         if self.pad == "SAME":
-            d_inputs = d_inputs[(self.size[0]-1)//2:self.d_inputs.shape[0]-self.size[0]//2+1, (self.size[1]-1)//2:self.d_inputs.shape[1]-self.size[1]//2+1]
+            d_inputs = d_inputs[:, (self.shape[0]-1)//2:-(self.shape[0]-1)//2, (self.shape[1]-1)//2:-(self.shape[1]-1)//2, :]
         # update
         self.v_weights = momentum * self.v_weights - learning_rate * (d_weights + weight_decay * self.weights)
         self.weights += self.v_weights
@@ -288,9 +288,8 @@ class PoolingLayer(object):
                     d_inputs[:, h_interval[0]:h_interval[1], w_interval[0]:w_interval[1], :] += self.weights * np.repeat(np.repeat(d_outputs[:, h:h+1, w:w+1, :], 2, axis=1), 2, axis=2) / self.shape[0] / self.shape[1]
                     d_weights += np.average(np.average(self.inputs[:, h_interval[0]:h_interval[1], w_interval[0]:w_interval[1], :], axis=(1, 2)) * d_outputs[:, h, w, :], axis=0)
                     d_biases += np.average(d_outputs[:, h, w, :], axis=0)
-
-        self.weights -= self.lr * d_weights
-        self.biases -= self.lr * d_biases
+                    self.weights -= self.lr * d_weights
+                    self.biases -= self.lr * d_biases
         
         return d_inputs
 
@@ -379,8 +378,8 @@ class FullyConnectedLayer(object):
         elif initializer == "ALEXNET_bias1":
             self.weights = np.random.normal(0, 0.01, shape)
             self.biases = np.ones([1, shape[-1]])
-        self.v_weights = None
-        self.v_biases = None
+        self.v_weights = np.zeros(self.weights.shape)
+        self.v_biases = np.zeros(self.biases.shape)
         self.activation_function = activation_function
         self.inputs = None
         self.inputs_activation = None
@@ -467,17 +466,16 @@ class Softmax(object):
     def forward_propagation(self, inputs, labels):
         self.inputs = inputs
         self.labels = labels
-        outputs = np.exp(inputs)
-        outputs /= np.sum(outputs, axis=1, keepdims=True)
-        labels_pred = np.argmax(outputs, axis=1)
-        self.outputs = outputs[range(len(outputs)), labels]
-        loss = -np.log(self.outputs)
+        self.outputs = np.exp(inputs)
+        self.outputs /= np.sum(self.outputs, axis=1, keepdims=True)
+        labels_pred = np.argmax(self.outputs, axis=1)
+        loss = -np.log(self.outputs[np.arange(len(self.outputs)), labels])
 
         return np.average(loss), labels_pred
 
     def backward_propagation(self):
         d_inputs = np.copy(self.outputs)
-        d_inputs[range(len(d_inputs)), self.labels] -= 1
+        d_inputs[np.arange(len(d_inputs)), self.labels] -= 1
 
         return d_inputs
 
