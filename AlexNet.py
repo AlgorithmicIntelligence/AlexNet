@@ -1,7 +1,6 @@
 import Layer
 import numpy as np
 
-
 class AlexNet(object):
     def __init__(self):
         self.C1 = Layer.ConvolutionalLayer([11, 11, 3, 96], pad="VALID", stride=4, activation_function="RELU", initializer="ALEXNET_bias0")
@@ -21,7 +20,7 @@ class AlexNet(object):
         self.D6 = Layer.DropOut(keep_prob=0.5)
         self.F7 = Layer.FullyConnectedLayer([4096, 4096], activation_function="RELU")
         self.D7 = Layer.DropOut(keep_prob=0.5)
-        self.F8 = Layer.FullyConnectedLayer([4096, 1000], activation_function="RELU")
+        self.F8 = Layer.FullyConnectedLayer([4096, 1000])
         self.Output = Layer.Softmax()
 
     def forward_propagation(self, inputs, labels):

@@ -30,8 +30,7 @@ class ConvolutionalLayer(object):
         self.inputs = inputs
         if self.pad == "SAME":
             inputs = np.pad(inputs, ((0, 0), ((self.shape[0]-1)//2, self.shape[0]//2), ((self.shape[1]-1)//2, self.shape[1]//2), (0, 0)), "constant")
-        else:
-            if self.pad != "VALID":
+        elif self.pad != "VALID":
                 raise AssertionError("PADDING NAME ERROR")
 
         outputs = np.zeros([inputs.shape[0], (inputs.shape[1]-self.shape[0])//self.stride + 1, (inputs.shape[2]-self.shape[1])//self.stride + 1, self.shape[-1]])
@@ -46,8 +45,7 @@ class ConvolutionalLayer(object):
             outputs = 1.7159 * np.tanh(2/3 * outputs)
         elif self.activation_function == "RELU":
             outputs = np.where(outputs < 0, 0, outputs)
-        else:
-            if self.activation_function != "LINEAR":
+        elif self.activation_function != "LINEAR":
                 raise AssertionError("ACTIVATION FUNCTION NAME ERROR")
         
         return outputs
@@ -56,7 +54,6 @@ class ConvolutionalLayer(object):
         if self.activation_function == "SIGMOID":
             d_outputs *= (1-self.outputs_activation) * self.outputs_activation
         elif self.activation_function == "SQUASHING":
-            # d_outputs = 1.7159 * 2/3 / np.power(np.cosh(2/3 * d_outputs), 2)
             d_outputs *= 1.7159 * 2/3 * (1-np.power(np.tanh(2/3 * self.inputs_activation), 2))
         elif self.activation_function == "RELU":
             d_outputs *= np.where(self.inputs_activation < 0, 0, 1)
@@ -229,7 +226,7 @@ class ConvolutionalCombinationLayer(object):
 class PoolingLayer(object):
     def __init__(self, shape, stride=2, mode="MAX", activation_function="SQUASHING"):
         self.shape = shape
-        Fi = np.prod(shape[:2])
+        Fi = np.prod(np.array(shape[:2]))
         self.weights = np.random.uniform(-2.4 / Fi, 2.4 / Fi, [1, 1, 1, shape[-1]])
         self.biases = np.ones([1, 1, 1, shape[-1]]) * 0.01
         self.activation_function = activation_function
