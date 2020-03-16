@@ -37,7 +37,6 @@ for epoch in range(len(learning_rate)):
 
     for i in range(len(trainingSet) // batch_size_train):
         # runtime:270 secs per batch.
-        train_data = np.zeros((batch_size_train, 224, 224, 3))
         train_imgs, train_labels = trainingSet.__getitem__(train_data_index[i*batch_size_train:(i+1)*batch_size_train])
         loss, labels_ = alexnet.forward_propagation(train_imgs, train_labels)
         alexnet.backward_propagation(learning_rate[epoch], weight_decay, momentum)

@@ -21,6 +21,9 @@ class ILSVRC2012(object):
                 if name.endswith("JPEG"):
                     self.img_paths.append(os.path.join(root, name))
                     self.labels.append(self.dirname_to_classnum[root.split('/')[-1]])
+                    
+        self.img_means = np.load('./img_means.npy')
+        self.img_means = self.img_means[16:16+224, 16:240]
     
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -39,7 +42,7 @@ class ILSVRC2012(object):
             
             y_start = (i % 33**2) // 33
             x_start = (i % 33**2) % 33
-            img_crop = img_center[y_start:y_start+224, x_start:x_start+224]
+            img_crop = img_center[y_start:y_start+224, x_start:x_start+224] - self.img_means
             reflect = i % (33 * 33 * 2) // (33 * 33)
             if reflect:
                 img_crop = img_crop[:, ::-1, :]
